@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <circle cx="32" cy="32" r="30" fill="#432713"/>
+  <circle cx="32" cy="32" r="28" stroke="#C49A45" stroke-width="1.5" stroke-dasharray="3 3"/>
+  <!-- Elegant Ghee Droplet / Golden Kalash motif -->
+  <path d="M32 14C32 14 20 28 20 37C20 43.6274 25.3726 49 32 49C38.6274 49 44 43.6274 44 37C44 28 32 14 32 14Z" fill="#C49A45"/>
+  <path d="M32 20C32 20 24 30 24 37C24 41.4183 27.5817 45 32 45C33.5 45 31 38 31 35C31 30 32 20 32 20Z" fill="#F4EBDD" opacity="0.6"/>
+  <!-- Minimalist traditional accent -->
+  <circle cx="32" cy="36" r="3" fill="#FFFDF8"/>
+</svg>
