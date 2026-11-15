@@ -173,8 +173,8 @@ export const generateAwbNumber = (courierName: string) => {
   const prefix = courierName.toLowerCase().includes('bluedart')
     ? 'BD'
     : courierName.toLowerCase().includes('delhivery')
-    ? 'DL'
-    : 'MK';
+      ? 'DL'
+      : 'MK';
   const randomNum = Math.floor(100000000 + Math.random() * 900000000);
   return `${prefix}-${randomNum}`;
 };
@@ -956,7 +956,7 @@ export const printTaxInvoiceBill = (order: OrderDetails) => {
             <div class="terms-block">
               <strong>Terms & Conditions:</strong><br>
               1. Goods once dispatched in sealed glass containers cannot be returned if seal is opened.<br>
-              2. Any rare transit damage is covered under our 100% Free Replacement Guarantee.<br>
+              2. Any rare transit dama-ge is covered under our 100% Free Replacement Guarantee.<br>
               3. Store at room temperature in a dry pantry away from direct sunlight. Do not refrigerate.
             </div>
 
