@@ -18,6 +18,7 @@ import { Cart } from './pages/Cart';
 import { Checkout } from './pages/Checkout';
 import { MyAccount } from './pages/MyAccount';
 import { Admin } from './pages/Admin';
+import { LegalPolicy } from './pages/LegalPolicy';
 
 // Auto scroll to top on route navigation
 const ScrollToTop = () => {
@@ -55,6 +56,16 @@ export const App: React.FC = () => {
               <Route path="/checkout" element={<Checkout />} />
               <Route path="/account" element={<MyAccount />} />
               <Route path="/admin" element={<Admin />} />
+              {/* Official Legal & Compliance Policies */}
+              <Route path="/privacy-policy" element={<LegalPolicy initialTab="privacy" />} />
+              <Route path="/terms-and-conditions" element={<LegalPolicy initialTab="terms" />} />
+              <Route path="/shipping-policy" element={<LegalPolicy initialTab="shipping" />} />
+              <Route path="/refund-policy" element={<LegalPolicy initialTab="refund" />} />
+              {/* Short URL Aliases */}
+              <Route path="/privacy" element={<LegalPolicy initialTab="privacy" />} />
+              <Route path="/terms" element={<LegalPolicy initialTab="terms" />} />
+              <Route path="/shipping" element={<LegalPolicy initialTab="shipping" />} />
+              <Route path="/returns" element={<LegalPolicy initialTab="refund" />} />
               {/* Fallback */}
               <Route path="*" element={<Home />} />
             </Routes>

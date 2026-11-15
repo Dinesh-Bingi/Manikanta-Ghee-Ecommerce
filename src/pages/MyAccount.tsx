@@ -42,7 +42,16 @@ export const MyAccount: React.FC = () => {
   const [addresses, setAddresses] = useState<SavedAddress[]>(() => {
     try {
       const stored = localStorage.getItem('manikanta_saved_addresses');
-      if (stored) return JSON.parse(stored);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) {
+          return parsed.filter(
+            (a: SavedAddress) =>
+              !a.addressLine1?.toLowerCase().includes('shanti vihar') &&
+              !a.city?.toLowerCase().includes('indiranagar')
+          );
+        }
+      }
       return [];
     } catch {
       return [];

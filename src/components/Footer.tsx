@@ -267,19 +267,19 @@ export const Footer: React.FC = () => {
 
         {/* Policies and Copyright */}
         <div className="pt-8 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-[#F4EBDD]/70 font-sans">
-          <p>© {new Date().getFullYear()} MANIKANTA GHEE. All rights reserved. Buffalo Ghee Only.</p>
+          <p>© {new Date().getFullYear()} MANIKANTA GHEE — Ayyappa Dairy Farm. All rights reserved.</p>
 
           <div className="flex flex-wrap items-center gap-6">
-            <Link to="/contact" className="hover:text-[#C49A45] transition-colors">
+            <Link to="/privacy-policy" className="hover:text-[#C49A45] transition-colors">
               Privacy Policy
             </Link>
-            <Link to="/contact" className="hover:text-[#C49A45] transition-colors">
+            <Link to="/terms-and-conditions" className="hover:text-[#C49A45] transition-colors">
               Terms & Conditions
             </Link>
-            <Link to="/contact" className="hover:text-[#C49A45] transition-colors">
+            <Link to="/shipping-policy" className="hover:text-[#C49A45] transition-colors">
               Shipping & Delivery Policy
             </Link>
-            <Link to="/contact" className="hover:text-[#C49A45] transition-colors">
+            <Link to="/refund-policy" className="hover:text-[#C49A45] transition-colors">
               Return & Refund Policy
             </Link>
           </div>
