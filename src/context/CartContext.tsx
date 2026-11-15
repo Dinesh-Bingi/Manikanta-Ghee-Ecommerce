@@ -27,14 +27,20 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 
 const CART_STORAGE_KEY = 'manikanta_cart_v1';
 const ORDERS_STORAGE_KEY = 'manikanta_orders_v1';
-const FREE_SHIPPING_THRESHOLD = 999;
-const STANDARD_SHIPPING_FEE = 90;
+const FREE_SHIPPING_THRESHOLD = 0; // Set to 0 for ₹5 trial purchase
+const STANDARD_SHIPPING_FEE = 0; // Set to 0 so total checkout is exactly ₹5
 
 export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [items, setItems] = useState<CartItem[]>(() => {
     try {
       const stored = localStorage.getItem(CART_STORAGE_KEY);
-      return stored ? JSON.parse(stored) : [];
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) {
+          return parsed.map((item: CartItem) => ({ ...item, price: 5 }));
+        }
+      }
+      return [];
     } catch {
       return [];
     }
