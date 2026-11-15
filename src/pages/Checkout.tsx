@@ -89,8 +89,8 @@ export const Checkout: React.FC = () => {
       return;
     }
 
-    // 2. Online Payment via Razorpay
-    const razorpayKey = import.meta.env.VITE_RAZORPAY_KEY_ID;
+    // 2. Online Payment via Razorpay (Live Production Key)
+    const razorpayKey = import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_live_U0KrJdG67I7J7n';
 
     if (!razorpayKey) {
       setErrorMessage(
