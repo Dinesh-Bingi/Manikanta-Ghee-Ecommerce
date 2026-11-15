@@ -26,7 +26,8 @@ import {
   Box,
   MapPin,
   Check,
-  FileText
+  FileText,
+  Zap
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { OrderDetails } from '../types';
@@ -37,6 +38,13 @@ import {
   calculatePackageDimensionsAndWeight,
   PICKUP_FACILITY
 } from '../lib/shipping';
+import {
+  getShiprocketConfig,
+  saveShiprocketConfig,
+  pushOrderToShiprocket,
+  testShiprocketAuth,
+  ShiprocketConfig
+} from '../lib/shiprocket';
 
 interface SubscriberRecord {
   email: string;
@@ -71,6 +79,55 @@ export const Admin: React.FC = () => {
   const [inquiries, setInquiries] = useState<InquiryRecord[]>([]);
   const [copiedSQL, setCopiedSQL] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+
+  // Shiprocket Automation State
+  const [shiprocketConfig, setShiprocketConfig] = useState<ShiprocketConfig>(() => getShiprocketConfig());
+  const [isTestingShiprocket, setIsTestingShiprocket] = useState(false);
+  const [shiprocketTestResult, setShiprocketTestResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [pushingOrderId, setPushingOrderId] = useState<string | null>(null);
+
+  const handleSaveShiprocket = () => {
+    saveShiprocketConfig(shiprocketConfig);
+    setShippingSuccessMsg('Shiprocket API configuration saved successfully!');
+    setTimeout(() => setShippingSuccessMsg(''), 5000);
+  };
+
+  const handleTestShiprocket = async () => {
+    if (!shiprocketConfig.email || !shiprocketConfig.password) {
+      setShiprocketTestResult({ success: false, message: 'Please enter Shiprocket Email and Password first.' });
+      return;
+    }
+    setIsTestingShiprocket(true);
+    setShiprocketTestResult(null);
+    const result = await testShiprocketAuth(shiprocketConfig.email, shiprocketConfig.password);
+    setShiprocketTestResult(result);
+    setIsTestingShiprocket(false);
+  };
+
+  const handleAutoPushShiprocket = async (order: OrderDetails) => {
+    if (!shiprocketConfig.email || !shiprocketConfig.password) {
+      alert('Please enter your Shiprocket Email and Password in the configuration panel above.');
+      return;
+    }
+    setPushingOrderId(order.orderId);
+    const result = await pushOrderToShiprocket(order, shiprocketConfig);
+    setPushingOrderId(null);
+
+    if (result.success) {
+      try {
+        const stored = localStorage.getItem('manikanta_orders_v1');
+        if (stored) {
+          setOrders(JSON.parse(stored));
+        }
+      } catch (e) {
+        console.error('Error refreshing orders', e);
+      }
+      setShippingSuccessMsg(result.message);
+      setTimeout(() => setShippingSuccessMsg(''), 8000);
+    } else {
+      alert(`Shiprocket API Notice: ${result.message}`);
+    }
+  };
 
   const configuredEmail = (import.meta.env.VITE_ADMIN_EMAIL || 'ayyappadairyfarms@gmail.com').trim().toLowerCase();
   const configuredPassword = (import.meta.env.VITE_ADMIN_PASSWORD || 'Manikanta@2026').trim();
@@ -672,23 +729,23 @@ CREATE POLICY "Allow public select inquiries" ON public.inquiries FOR SELECT TO 
               </div>
             )}
 
-            {/* Courier Dispatch Facility & Rules Card */}
-            <div className="bg-[#FFFDF8] rounded-3xl border border-[#E7DCCB] p-6 sm:p-8 shadow-xs space-y-4">
+            {/* Shiprocket Automated API Integration Panel */}
+            <div className="bg-[#FFFDF8] rounded-3xl border border-[#E7DCCB] p-6 sm:p-8 shadow-xs space-y-5">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#E7DCCB] pb-4">
                 <div>
                   <div className="flex items-center gap-2">
                     <span className="text-xs uppercase tracking-widest text-[#C49A45] font-bold">
-                      National Logistics Hub
+                      Logistics API Engine
                     </span>
-                    <span className="px-2 py-0.5 rounded-full bg-[#70431F] text-[#FFFDF8] text-[10px] font-bold">
-                      Active Courier Dispatch
+                    <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 text-[10px] font-bold">
+                      Delhivery & Shadowfax Roadways
                     </span>
                   </div>
                   <h3 className="font-serif text-2xl font-medium text-[#432713] mt-0.5">
-                    Courier Management & Doorstep Pickup
+                    Shiprocket API Automation & Doorstep Pickup
                   </h3>
                   <p className="text-xs text-[#66594D] mt-1 font-sans">
-                    Doorstep pickup partner: <strong>Shiprocket</strong> (BlueDart, Delhivery, DTDC, XpressBees)
+                    Automatically book <strong>Delhivery Surface</strong>, <strong>Shadowfax</strong>, or <strong>DTDC</strong> with 1 click. Generates official barcode labels and live customer tracking.
                   </p>
                 </div>
 
@@ -699,8 +756,119 @@ CREATE POLICY "Allow public select inquiries" ON public.inquiries FOR SELECT TO 
                     rel="noreferrer"
                     className="btn-gold px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow-sm"
                   >
-                    <ExternalLink className="w-3.5 h-3.5" /> Open Shiprocket Panel
+                    <ExternalLink className="w-3.5 h-3.5" /> Shiprocket Dashboard
                   </a>
+                </div>
+              </div>
+
+              {/* API Credentials Input Form */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs font-sans">
+                <div>
+                  <label className="block font-semibold text-[#432713] mb-1">Shiprocket Login Email</label>
+                  <input
+                    type="email"
+                    placeholder="shiprocket-account@gmail.com"
+                    value={shiprocketConfig.email}
+                    onChange={(e) => setShiprocketConfig({ ...shiprocketConfig, email: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl border border-[#E7DCCB] bg-[#FFFDF8] text-[#432713] text-xs focus:outline-none focus:border-[#C49A45]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-[#432713] mb-1">Shiprocket Login Password</label>
+                  <input
+                    type="password"
+                    placeholder="••••••••••••"
+                    value={shiprocketConfig.password}
+                    onChange={(e) => setShiprocketConfig({ ...shiprocketConfig, password: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl border border-[#E7DCCB] bg-[#FFFDF8] text-[#432713] text-xs focus:outline-none focus:border-[#C49A45]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-[#432713] mb-1">Pickup Location Nickname</label>
+                  <input
+                    type="text"
+                    placeholder="Ayyappa Dairy Farm or Primary"
+                    value={shiprocketConfig.pickupLocation}
+                    onChange={(e) => setShiprocketConfig({ ...shiprocketConfig, pickupLocation: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl border border-[#E7DCCB] bg-[#FFFDF8] text-[#432713] text-xs focus:outline-none focus:border-[#C49A45]"
+                  />
+                  <span className="text-[10px] text-[#70431F]">Must match Pickup Address name in Shiprocket</span>
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-[#432713] mb-1">Preferred Carrier Mode</label>
+                  <select
+                    value={shiprocketConfig.preferredCourier}
+                    onChange={(e) =>
+                      setShiprocketConfig({ ...shiprocketConfig, preferredCourier: e.target.value as any })
+                    }
+                    className="w-full px-3 py-2 rounded-xl border border-[#E7DCCB] bg-[#FFFDF8] text-[#432713] text-xs focus:outline-none focus:border-[#C49A45]"
+                  >
+                    <option value="delhivery_surface">Delhivery Surface (Roadways — Best for Ghee)</option>
+                    <option value="shadowfax_surface">Shadowfax Surface (Roadways)</option>
+                    <option value="surface_lowest_rate">Auto-Assign Lowest Cost Surface</option>
+                    <option value="express_air">Express Air (BlueDart / Delhivery Air)</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Actions & Connection Status */}
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-3 border-t border-[#E7DCCB]">
+                <div className="text-[11px] text-[#66594D]">
+                  {shiprocketTestResult && (
+                    <span
+                      className={`inline-flex items-center gap-1.5 font-semibold ${
+                        shiprocketTestResult.success ? 'text-emerald-700' : 'text-amber-800'
+                      }`}
+                    >
+                      {shiprocketTestResult.success ? (
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                      ) : (
+                        <AlertCircle className="w-4 h-4 text-amber-600" />
+                      )}
+                      {shiprocketTestResult.message}
+                    </span>
+                  )}
+                  {!shiprocketTestResult && (
+                    <span>
+                      Save your Shiprocket email & password here to enable 1-click automated road parcel dispatch.
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-2 self-end sm:self-auto">
+                  <button
+                    type="button"
+                    disabled={isTestingShiprocket || !shiprocketConfig.email || !shiprocketConfig.password}
+                    onClick={handleTestShiprocket}
+                    className="px-3.5 py-1.5 rounded-xl border border-[#C49A45] text-[#70431F] text-xs font-semibold hover:bg-[#F4EBDD] transition-colors disabled:opacity-50"
+                  >
+                    {isTestingShiprocket ? 'Testing...' : 'Test API Connection'}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleSaveShiprocket}
+                    className="btn-gold px-4 py-1.5 rounded-xl text-xs font-semibold shadow-xs"
+                  >
+                    Save API Credentials
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Courier Dispatch Facility & Rules Card */}
+            <div className="bg-[#FFFDF8] rounded-3xl border border-[#E7DCCB] p-6 sm:p-8 shadow-xs space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#E7DCCB] pb-4">
+                <div>
+                  <h3 className="font-serif text-2xl font-medium text-[#432713]">
+                    Yadadri Bhuvanagiri Dispatch Facility
+                  </h3>
+                  <p className="text-xs text-[#66594D] mt-1 font-sans">
+                    Origin address for Delhivery, Shadowfax, and BlueDart pickup vans.
+                  </p>
                 </div>
               </div>
 
@@ -719,10 +887,10 @@ CREATE POLICY "Allow public select inquiries" ON public.inquiries FOR SELECT TO 
 
                 <div className="p-4 rounded-2xl bg-[#F4EBDD]/40 border border-[#E7DCCB] space-y-1">
                   <span className="font-bold text-[#432713] flex items-center gap-1.5">
-                    <Truck className="w-3.5 h-3.5 text-[#C49A45]" /> Primary Glass Carrier:
+                    <Truck className="w-3.5 h-3.5 text-[#C49A45]" /> Roadways Carrier Fleet:
                   </span>
                   <p className="text-[#66594D] text-[11px] leading-relaxed">
-                    <strong>BlueDart Express Air</strong> (Priority fragile cargo) & <strong>Delhivery Air</strong>. Agents arrive directly at the farm for parcel scan.
+                    <strong>Delhivery Surface</strong> & <strong>Shadowfax Surface</strong> for secure road transit of heavy ghee jars without cargo cabin pressure leaks.
                   </p>
                 </div>
 
@@ -731,7 +899,7 @@ CREATE POLICY "Allow public select inquiries" ON public.inquiries FOR SELECT TO 
                     <ShieldCheck className="w-3.5 h-3.5 text-[#C49A45]" /> Packaging Protocol:
                   </span>
                   <p className="text-[#66594D] text-[11px] leading-relaxed">
-                    Inflatable Air Column Bags + 5-ply outer corrugated box + "FRAGILE GLASS" barcode label required.
+                    Inflatable Air Column Sleeves + 5-ply outer box + "FRAGILE GLASS GHEE" label mandatory.
                   </p>
                 </div>
               </div>
@@ -744,7 +912,7 @@ CREATE POLICY "Allow public select inquiries" ON public.inquiries FOR SELECT TO 
                   Orders Awaiting Courier Dispatch & Label Generation
                 </h3>
                 <p className="text-xs text-[#66594D] mt-0.5">
-                  Assign carrier, calculate dead weight, print barcode labels, and request doorstep courier pickup.
+                  1-click automated push to Shiprocket (Delhivery / Shadowfax) or manual booking.
                 </p>
               </div>
 
@@ -757,8 +925,9 @@ CREATE POLICY "Allow public select inquiries" ON public.inquiries FOR SELECT TO 
                 <div className="space-y-4">
                   {orders.map((order) => {
                     const { grossWeightKg } = calculatePackageDimensionsAndWeight(order.items || []);
-                    const selectedCourier = selectedCouriers[order.orderId] || order.shippingDetails?.courierName || 'BlueDart Express Air';
+                    const selectedCourier = selectedCouriers[order.orderId] || order.shippingDetails?.courierName || 'Delhivery Surface (Roadways)';
                     const isDispatched = order.status === 'Dispatched' || order.status === 'Delivered';
+                    const isPushing = pushingOrderId === order.orderId;
 
                     return (
                       <div
@@ -827,20 +996,33 @@ CREATE POLICY "Allow public select inquiries" ON public.inquiries FOR SELECT TO 
                               }
                               className="px-3 py-2 rounded-xl border border-[#E7DCCB] bg-[#F4EBDD]/40 text-xs font-medium text-[#432713] focus:outline-none focus:border-[#C49A45]"
                             >
+                              <option value="Delhivery Surface (Roadways)">Delhivery Surface (Roadways)</option>
+                              <option value="Shadowfax Surface (Roadways)">Shadowfax Surface (Roadways)</option>
+                              <option value="DTDC Surface (Roadways)">DTDC Surface (Roadways)</option>
                               <option value="BlueDart Express Air">BlueDart Express Air (Fragile Safe)</option>
-                              <option value="Delhivery Direct Air">Delhivery Direct Air Express</option>
-                              <option value="DTDC Express Air">DTDC Express Premium</option>
                               <option value="India Post Speed Post">India Post Speed Post (Rural)</option>
                             </select>
 
-                            {/* Book / Re-book Button */}
+                            {/* Book / Auto-Push / Re-book Button */}
                             {!isDispatched ? (
-                              <button
-                                onClick={() => handleBookShipment(order)}
-                                className="btn-gold px-4 py-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 shadow-sm"
-                              >
-                                <Truck className="w-3.5 h-3.5" /> Book Courier & Get AWB
-                              </button>
+                              <div className="flex items-center gap-2">
+                                <button
+                                  disabled={isPushing}
+                                  onClick={() => handleAutoPushShiprocket(order)}
+                                  className="btn-gold px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 shadow-sm disabled:opacity-50"
+                                  title="Automatically push to Shiprocket API, choose Delhivery/Shadowfax, and generate live AWB"
+                                >
+                                  <Zap className="w-3.5 h-3.5 text-[#FFFDF8]" />
+                                  {isPushing ? 'Pushing to API...' : '⚡ Auto-Push Shiprocket'}
+                                </button>
+                                <button
+                                  onClick={() => handleBookShipment(order)}
+                                  className="px-3 py-2 rounded-xl border border-[#E7DCCB] text-[#70431F] text-xs font-semibold hover:bg-[#F4EBDD] transition-colors"
+                                  title="Manual booking without API call"
+                                >
+                                  Manual
+                                </button>
+                              </div>
                             ) : (
                               <div className="flex items-center gap-2">
                                 <button
@@ -850,13 +1032,25 @@ CREATE POLICY "Allow public select inquiries" ON public.inquiries FOR SELECT TO 
                                 >
                                   <FileText className="w-3.5 h-3.5" /> Bill Receipt
                                 </button>
-                                <button
-                                  onClick={() => printShippingLabel(order)}
-                                  className="btn-outline-brown px-3 py-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 shadow-xs"
-                                  title="Print 4x6 / A4 Shipping Label"
-                                >
-                                  <Printer className="w-3.5 h-3.5 text-[#C49A45]" /> Label
-                                </button>
+                                {order.shippingDetails?.labelUrl ? (
+                                  <a
+                                    href={order.shippingDetails.labelUrl}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="btn-outline-brown px-3 py-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 shadow-xs"
+                                    title="Open Official Carrier Barcode Label"
+                                  >
+                                    <Printer className="w-3.5 h-3.5 text-[#C49A45]" /> Label PDF
+                                  </a>
+                                ) : (
+                                  <button
+                                    onClick={() => printShippingLabel(order)}
+                                    className="btn-outline-brown px-3 py-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 shadow-xs"
+                                    title="Print 4x6 / A4 Shipping Label"
+                                  >
+                                    <Printer className="w-3.5 h-3.5 text-[#C49A45]" /> Label
+                                  </button>
+                                )}
                                 {order.shippingDetails?.trackingUrl && (
                                   <a
                                     href={order.shippingDetails.trackingUrl}

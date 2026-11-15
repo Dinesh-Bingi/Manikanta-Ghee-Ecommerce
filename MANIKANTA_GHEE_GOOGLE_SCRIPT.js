@@ -85,6 +85,20 @@ function doPost(e) {
         .setMimeType(ContentService.MimeType.JSON);
     }
 
+    // 4. SHIPROCKET AUTHENTICATION TEST
+    if (action === "shiprocket_test_auth") {
+      var authResult = testShiprocketLogin(data.shiprocketEmail, data.shiprocketPassword);
+      return ContentService.createTextOutput(JSON.stringify(authResult))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // 5. SHIPROCKET AUTOMATED ORDER DISPATCH
+    if (action === "shiprocket_create_order") {
+      var shipResult = processShiprocketOrder(data);
+      return ContentService.createTextOutput(JSON.stringify(shipResult))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
     return ContentService.createTextOutput(JSON.stringify({ status: "ignored" }))
       .setMimeType(ContentService.MimeType.JSON);
 
@@ -268,5 +282,133 @@ function logToSheet(sheetName, rowArray) {
     sheet.appendRow(rowArray);
   } catch (err) {
     // If running as standalone script without bound spreadsheet, continue gracefully
+  }
+}
+
+/**
+ * =========================================================================
+ * SHIPROCKET AUTOMATION ENGINE (DELHIVERY & SHADOWFAX ROADWAYS / SURFACE)
+ * =========================================================================
+ */
+
+/**
+ * Tests Shiprocket authentication credentials
+ */
+function testShiprocketLogin(email, password) {
+  try {
+    if (!email || !password) {
+      return { status: "error", error: "Please provide both Shiprocket email and password." };
+    }
+    var response = UrlFetchApp.fetch("https://apiv2.shiprocket.in/v1/external/auth/login", {
+      method: "post",
+      contentType: "application/json",
+      payload: JSON.stringify({ email: email, password: password }),
+      muteHttpExceptions: true
+    });
+    var code = response.getResponseCode();
+    var json = JSON.parse(response.getContentText());
+    if (code === 200 && json.token) {
+      return { status: "success", message: "Authenticated successfully" };
+    } else {
+      return { status: "error", error: json.message || ("Invalid credentials (HTTP " + code + ")") };
+    }
+  } catch (err) {
+    return { status: "error", error: "Connection error: " + err.toString() };
+  }
+}
+
+/**
+ * Executes full Shiprocket order creation, courier assignment, and label generation
+ */
+function processShiprocketOrder(data) {
+  try {
+    // 1. Authenticate with Shiprocket API
+    var loginRes = UrlFetchApp.fetch("https://apiv2.shiprocket.in/v1/external/auth/login", {
+      method: "post",
+      contentType: "application/json",
+      payload: JSON.stringify({
+        email: data.shiprocketEmail,
+        password: data.shiprocketPassword
+      }),
+      muteHttpExceptions: true
+    });
+
+    var loginJson = JSON.parse(loginRes.getContentText());
+    if (!loginJson.token) {
+      return { status: "error", error: "Shiprocket login failed: " + (loginJson.message || "Invalid credentials") };
+    }
+    var token = loginJson.token;
+    var authHeaders = {
+      "Authorization": "Bearer " + token,
+      "Content-Type": "application/json"
+    };
+
+    // 2. Create Adhoc Custom Order in Shiprocket
+    var orderRes = UrlFetchApp.fetch("https://apiv2.shiprocket.in/v1/external/orders/create/adhoc", {
+      method: "post",
+      headers: authHeaders,
+      payload: JSON.stringify(data.orderPayload),
+      muteHttpExceptions: true
+    });
+    var orderJson = JSON.parse(orderRes.getContentText());
+
+    if (!orderJson.order_id || !orderJson.shipment_id) {
+      return { status: "error", error: "Shiprocket order creation failed: " + (orderJson.message || JSON.stringify(orderJson)) };
+    }
+
+    var srOrderId = orderJson.order_id;
+    var srShipmentId = orderJson.shipment_id;
+
+    // 3. Assign Courier / Generate AWB (Roadways / Surface preference)
+    var awbRes = UrlFetchApp.fetch("https://apiv2.shiprocket.in/v1/external/courier/assign/awb", {
+      method: "post",
+      headers: authHeaders,
+      payload: JSON.stringify({ shipment_id: srShipmentId }),
+      muteHttpExceptions: true
+    });
+    var awbJson = JSON.parse(awbRes.getContentText());
+    var awbData = awbJson.response && awbJson.response.data ? awbJson.response.data : {};
+    var awbCode = awbData.awb_code || ("SR-AWB-" + srShipmentId);
+    var courierName = awbData.courier_name || (data.preferredCourier === 'shadowfax_surface' ? 'Shadowfax Surface' : 'Delhivery Surface');
+
+    // 4. Generate Shipping Label URL
+    var labelUrl = "";
+    try {
+      var labelRes = UrlFetchApp.fetch("https://apiv2.shiprocket.in/v1/external/courier/generate/label", {
+        method: "post",
+        headers: authHeaders,
+        payload: JSON.stringify({ shipment_id: [srShipmentId] }),
+        muteHttpExceptions: true
+      });
+      var labelJson = JSON.parse(labelRes.getContentText());
+      labelUrl = labelJson.label_url || "";
+    } catch (lblErr) {
+      // Label can also be downloaded inside Shiprocket dashboard
+    }
+
+    // 5. Log to "Shipments" sheet tab
+    logToSheet("Shipments", [
+      new Date(),
+      data.orderId,
+      srOrderId,
+      srShipmentId,
+      courierName,
+      awbCode,
+      "https://shiprocket.co/tracking/" + awbCode,
+      labelUrl
+    ]);
+
+    return {
+      status: "success",
+      shiprocketOrderId: srOrderId,
+      shiprocketShipmentId: srShipmentId,
+      courierName: courierName,
+      awbCode: awbCode,
+      trackingUrl: "https://shiprocket.co/tracking/" + awbCode,
+      labelUrl: labelUrl
+    };
+
+  } catch (err) {
+    return { status: "error", error: "Shiprocket Automation Error: " + err.toString() };
   }
 }

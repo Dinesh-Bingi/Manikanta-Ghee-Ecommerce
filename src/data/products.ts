@@ -26,7 +26,7 @@ export const PRODUCTS: Product[] = [
       {
         size: '250ml',
         weightGrams: 230,
-        price: 5,
+        price: 490,
         originalPrice: 550,
         inStock: true,
         sku: 'MK-BIL-250'
@@ -34,7 +34,7 @@ export const PRODUCTS: Product[] = [
       {
         size: '500ml',
         weightGrams: 460,
-        price: 5,
+        price: 890,
         originalPrice: 990,
         inStock: true,
         sku: 'MK-BIL-500'
@@ -42,7 +42,7 @@ export const PRODUCTS: Product[] = [
       {
         size: '1000ml',
         weightGrams: 920,
-        price: 5,
+        price: 1690,
         originalPrice: 1890,
         inStock: true,
         sku: 'MK-BIL-1000'
@@ -50,7 +50,7 @@ export const PRODUCTS: Product[] = [
       {
         size: '2000ml',
         weightGrams: 1840,
-        price: 5,
+        price: 3250,
         originalPrice: 3600,
         inStock: true,
         sku: 'MK-BIL-2000'
@@ -129,7 +129,7 @@ export const PRODUCTS: Product[] = [
       {
         size: '250ml',
         weightGrams: 230,
-        price: 5,
+        price: 320,
         originalPrice: 380,
         inStock: true,
         sku: 'MK-MOD-250'
@@ -137,7 +137,7 @@ export const PRODUCTS: Product[] = [
       {
         size: '500ml',
         weightGrams: 460,
-        price: 5,
+        price: 590,
         originalPrice: 680,
         inStock: true,
         sku: 'MK-MOD-500'
@@ -145,7 +145,7 @@ export const PRODUCTS: Product[] = [
       {
         size: '1000ml',
         weightGrams: 920,
-        price: 5,
+        price: 1120,
         originalPrice: 1290,
         inStock: true,
         sku: 'MK-MOD-1000'
@@ -153,7 +153,7 @@ export const PRODUCTS: Product[] = [
       {
         size: '5000ml (Tin)',
         weightGrams: 4600,
-        price: 5,
+        price: 5290,
         originalPrice: 5900,
         inStock: true,
         sku: 'MK-MOD-5000'

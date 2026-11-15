@@ -114,5 +114,8 @@ export interface OrderDetails {
     weightKg?: number;
     pickupLocation?: string;
     dispatchedAt?: string;
+    shiprocketOrderId?: number | string;
+    shiprocketShipmentId?: number | string;
+    labelUrl?: string;
   };
 }
