@@ -4,6 +4,20 @@ const googleScriptUrl =
   import.meta.env.VITE_GOOGLE_SCRIPT_URL ||
   'https://script.google.com/macros/s/AKfycbwI0F6MRTX3cKCn029mlH6nVh7ax3LXbr5s2R1647JA4MpA4CVypOAt9x-bXMACgHSH5Q/exec';
 
+/**
+ * Returns the live production website URL for email links.
+ * Uses window.location.origin when deployed live, avoiding dead localhost links in emails.
+ */
+export const getLiveWebsiteUrl = (): string => {
+  if (typeof window !== 'undefined' && window.location && window.location.origin) {
+    const origin = window.location.origin;
+    if (!origin.includes('localhost') && !origin.includes('127.0.0.1')) {
+      return origin;
+    }
+  }
+  return import.meta.env.VITE_SITE_URL || 'https://manikanta-ghee.netlify.app';
+};
+
 const serviceId = import.meta.env.VITE_EMAILJS_SERVICE_ID || '';
 const templateId = import.meta.env.VITE_EMAILJS_TEMPLATE_ID || '';
 const publicKey = import.meta.env.VITE_EMAILJS_PUBLIC_KEY || '';
@@ -35,6 +49,7 @@ export const sendNewsletterWelcomeEmail = async (subscriberEmail: string) => {
           brandName: 'MANIKANTA GHEE',
           tagline: 'Tradition • Purity • Quality',
           farm: 'Ayyappa Dairy Farm',
+          siteUrl: getLiveWebsiteUrl(),
           timestamp: new Date().toISOString()
         })
       });
@@ -92,6 +107,7 @@ export const sendOrderConfirmationEmail = async (order: any) => {
           total: order.total,
           paymentMethod: order.paymentMethod,
           items: order.items,
+          siteUrl: getLiveWebsiteUrl(),
           timestamp: new Date().toISOString()
         })
       });

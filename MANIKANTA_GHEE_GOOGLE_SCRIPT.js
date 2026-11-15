@@ -30,6 +30,7 @@
 var OWNER_EMAIL = "ayyappadairyfarms@gmail.com";
 var BRAND_NAME = "MANIKANTA GHEE";
 var SENDER_NAME = "MANIKANTA GHEE — Ayyappa Dairy Farm";
+var DEFAULT_LIVE_SITE_URL = "https://manikanta-ghee.netlify.app"; // Fallback when subscribing from localhost
 
 function doPost(e) {
   try {
@@ -37,9 +38,15 @@ function doPost(e) {
     var data = JSON.parse(rawData);
     var action = data.action || "";
 
+    // Resolve the live website URL (avoids dead localhost links in emails)
+    var siteUrl = data.siteUrl || DEFAULT_LIVE_SITE_URL;
+    if (!siteUrl || siteUrl.indexOf("localhost") !== -1 || siteUrl.indexOf("127.0.0.1") !== -1) {
+      siteUrl = DEFAULT_LIVE_SITE_URL;
+    }
+
     // 1. NEWSLETTER SUBSCRIPTION
     if (action === "newsletter") {
-      sendNewsletterWelcome(data.email);
+      sendNewsletterWelcome(data.email, siteUrl);
       logToSheet("Subscribers", [new Date(), data.email, "Website Footer Newsletter"]);
       return ContentService.createTextOutput(JSON.stringify({ status: "success", message: "Welcome email sent" }))
         .setMimeType(ContentService.MimeType.JSON);
@@ -47,8 +54,8 @@ function doPost(e) {
 
     // 2. ORDER CONFIRMATION
     if (action === "order") {
-      sendOrderConfirmation(data);
-      sendOwnerOrderAlert(data);
+      sendOrderConfirmation(data, siteUrl);
+      sendOwnerOrderAlert(data, siteUrl);
       logToSheet("Orders", [
         new Date(),
         data.orderId,
@@ -90,7 +97,8 @@ function doPost(e) {
 /**
  * Sends a luxury HTML welcome email to the subscriber
  */
-function sendNewsletterWelcome(toEmail) {
+function sendNewsletterWelcome(toEmail, siteUrl) {
+  var activeSiteUrl = siteUrl || DEFAULT_LIVE_SITE_URL;
   var subject = "Welcome to MANIKANTA GHEE — The Golden Essence of Tradition";
   
   var htmlBody = "" +
@@ -125,9 +133,9 @@ function sendNewsletterWelcome(toEmail) {
             "As a subscriber, you will receive first privilege access to our seasonal small-batch churnings, festival bookings, and traditional culinary recipes." +
           "</p>" +
 
-          // Button
+          // Button (Links to live shop URL)
           "<div style='text-align:center; margin:32px 0 16px;'>" +
-            "<a href='http://localhost:5173/shop' style='background-color:#C49A45; color:#FFFDF8; padding:14px 28px; font-size:13px; font-weight:bold; text-transform:uppercase; letter-spacing:0.12em; text-decoration:none; border-radius:10px; display:inline-block; box-shadow:0 3px 10px rgba(196, 154, 69, 0.3);'>Explore Buffalo Ghee Jars</a>" +
+            "<a href='" + activeSiteUrl + "/shop' style='background-color:#C49A45; color:#FFFDF8; padding:14px 28px; font-size:13px; font-weight:bold; text-transform:uppercase; letter-spacing:0.12em; text-decoration:none; border-radius:10px; display:inline-block; box-shadow:0 3px 10px rgba(196, 154, 69, 0.3);'>Explore Buffalo Ghee Jars</a>" +
           "</div>" +
         "</div>" +
 
@@ -150,7 +158,8 @@ function sendNewsletterWelcome(toEmail) {
 /**
  * Sends order confirmation to the customer
  */
-function sendOrderConfirmation(order) {
+function sendOrderConfirmation(order, siteUrl) {
+  var activeSiteUrl = siteUrl || DEFAULT_LIVE_SITE_URL;
   var subject = "Order Confirmed #" + order.orderId + " — MANIKANTA GHEE";
   
   var itemsHtml = "";
@@ -191,6 +200,10 @@ function sendOrderConfirmation(order) {
             "</table>" +
           "</div>" +
 
+          "<div style='text-align:center; margin:24px 0 16px;'>" +
+            "<a href='" + activeSiteUrl + "/account' style='background-color:#432713; color:#FFFDF8; padding:12px 24px; font-size:12px; font-weight:bold; text-transform:uppercase; letter-spacing:0.12em; text-decoration:none; border-radius:8px; display:inline-block;'>View Order & Tracking</a>" +
+          "</div>" +
+
           "<p style='font-size:12px; color:#66594D;'><strong>Shipping Address:</strong><br>" + (order.shippingAddress || "Provided during checkout") + "</p>" +
           "<p style='font-size:12px; color:#66594D;'>Questions regarding dispatch? WhatsApp us at: <strong>+91 6303328180</strong></p>" +
         "</div>" +
@@ -207,7 +220,8 @@ function sendOrderConfirmation(order) {
 /**
  * Alerts the store owner when a new order arrives
  */
-function sendOwnerOrderAlert(order) {
+function sendOwnerOrderAlert(order, siteUrl) {
+  var activeSiteUrl = siteUrl || DEFAULT_LIVE_SITE_URL;
   var subject = "🚨 NEW ORDER ALERT #" + order.orderId + " — ₹" + order.total + " (MANIKANTA GHEE)";
   var body = "NEW ORDER RECEIVED ON MANIKANTA GHEE STORE:\n\n" +
     "Order ID: " + order.orderId + "\n" +
@@ -215,7 +229,7 @@ function sendOwnerOrderAlert(order) {
     "Total: ₹" + order.total + " via " + order.paymentMethod + "\n" +
     "Address: " + order.shippingAddress + "\n" +
     "Time: " + new Date().toLocaleString() + "\n\n" +
-    "View your admin dashboard at: http://localhost:5173/admin";
+    "View your admin dashboard at: " + activeSiteUrl + "/admin";
 
   GmailApp.sendEmail(OWNER_EMAIL, subject, body, {
     name: "MANIKANTA GHEE Store Alerts"
