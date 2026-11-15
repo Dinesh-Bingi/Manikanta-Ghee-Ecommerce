@@ -389,7 +389,7 @@ function numberToWords(amount: number): string {
  * with the official MANIKANTA GHEE Logo, proper margins, and minimal luxury typography.
  */
 export const printTaxInvoiceBill = (order: OrderDetails) => {
-  const invoiceNumber = `BILL-2026-${order.orderId}`;
+  const invoiceNumber = `INV-2026-${order.orderId}`;
   const invoiceDate = new Date(order.createdAt).toLocaleDateString('en-IN', {
     day: 'numeric',
     month: 'short',
@@ -404,11 +404,31 @@ export const printTaxInvoiceBill = (order: OrderDetails) => {
   const courier = order.shippingDetails?.courierName || 'BlueDart Express Air';
   const totalInWords = numberToWords(Math.round(order.total));
 
-  // Merchandise Subtotal (Sum of items at pure price)
+  // Determine destination tax jurisdiction based on customer delivery/billing address
+  const customerState = (order.customer?.state || '').trim().toLowerCase();
+  const customerPincode = (order.customer?.pincode || '').trim();
+  const isTelangana =
+    customerState === 'telangana' ||
+    customerState.includes('telangana') ||
+    customerPincode.startsWith('50');
+
+  // Merchandise Subtotal (Sum of items at pure MRP / selling price)
   const merchandiseTotal = order.items.reduce(
     (acc, item) => acc + item.price * item.quantity,
     0
   );
+
+  // Applicable discounted merchandise amount (handling promotional discounts if any)
+  const discountAmount = Math.max(0, order.discount || 0);
+  const discountedMerchandise = Math.max(0, merchandiseTotal - discountAmount);
+
+  // Compute inclusive 5% GST breakdown for Dairy Ghee (HSN: 0405 9020)
+  // Taxable value = GST-inclusive merchandise amount / 1.05
+  // Total GST = GST-inclusive merchandise amount - taxable value
+  const taxableMerchandise = Number((discountedMerchandise / 1.05).toFixed(2));
+  const totalGst = Number((discountedMerchandise - taxableMerchandise).toFixed(2));
+  const cgst = Number((totalGst / 2).toFixed(2));
+  const sgst = Number((totalGst - cgst).toFixed(2)); // Exact split to prevent 1-paisa rounding error
 
   const itemsHtml = order.items
     .map((item, idx) => {
@@ -423,6 +443,7 @@ export const printTaxInvoiceBill = (order: OrderDetails) => {
               ${item.category === 'traditional-bilona' ? 'Traditional Vedic 6-Stage Curd Churn • 100% Buffalo Milk' : 'Hygienic 4-Stage Thermal Clarified • 250°C Smoke Point'}
             </div>
           </td>
+          <td style="padding: 12px 10px; text-align: center; font-family: monospace; font-size: 11px; color: #432713;">0405 9020</td>
           <td style="padding: 12px 10px; text-align: center; font-weight: 600; color: #432713; font-size: 12px;">${item.size}</td>
           <td style="padding: 12px 10px; text-align: center; font-variant-numeric: tabular-nums; font-weight: 700; color: #432713; font-size: 12px;">${item.quantity}</td>
           <td style="padding: 12px 10px; text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; color: #432713; font-size: 12px;">₹${item.price.toFixed(2)}</td>
